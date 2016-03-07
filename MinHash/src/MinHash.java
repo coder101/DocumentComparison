@@ -9,7 +9,8 @@ import java.util.*;
  */
 public class MinHash {
 
-    Map<String, Integer> fileList;
+    BigInteger [] fileTermsBinFre;
+    public Map<String, Integer> fileList;
     ArrayList<Set<String>> terms;
     ArrayList<Set<Integer>> termIDs;
     Map<String,Integer> MasterTermIDTable;
@@ -42,16 +43,23 @@ public class MinHash {
         int file1ID = fileList.get(file1);
         int file2ID = fileList.get(file2);
 
-        Set union = new TreeSet<String>();
-        union.addAll(termIDs.get(file1ID));
-        union.addAll(termIDs.get(file2ID));
+        int unionSize = termIDs.get(file1ID).size()+termIDs.get(file2ID).size();
 
-        System.out.println("Set 1 is "+termIDs.get(file1ID).toString() +"  \n\n set 2 is "+termIDs.get(file2ID));
-        Set intersection = new TreeSet<Integer>(termIDs.get(file1ID));
+       // System.out.println("Set 1 is "+termIDs.get(file1ID).toString() +"  \n\n set 2 is "+termIDs.get(file2ID));
+        /*Set intersection = new TreeSet<Integer>(termIDs.get(file1ID));
         intersection.retainAll(termIDs.get(file2ID));
-        double jac = (double)intersection.size()/union.size();
-        System.out.println(" the exact jaccard similarity is "+ intersection.size()+"- "+union.size() +" "+jac);
-        return 0.0;
+        unionSize = unionSize - intersection.size();
+        double jac = (double)intersection.size()/unionSize;
+        */
+        BigInteger intersection1 = fileTermsBinFre[file1ID];
+        intersection1 = intersection1.and(fileTermsBinFre[file2ID]);
+        int unionSize1 = 0;
+        unionSize1= unionSize1 - intersection1.bitCount();
+
+        double jac1 = (double)intersection1.bitCount()/unionSize;
+
+       // System.out.println(" the exact jaccard similarity is "+jac +"  "+jac1);
+        return jac1;
     }
 
     //approxJac of the files passed as args
@@ -60,12 +68,12 @@ public class MinHash {
         int file1ID = fileList.get(file1);
         int file2ID = fileList.get(file2);
 
-        InitializePermutationFunction();
-        ProcessMinHashSignature(file1ID);
-        ProcessMinHashSignature(file2ID);
+        //InitializePermutationFunction();
+        //ProcessMinHashSignature(file1ID);
+        //ProcessMinHashSignature(file2ID);
 
         int equalMinCount=0;
-        for(int i = 0 ; i < numPermutations(); i ++)
+        for(int i = 0 ; i < noOfPermutations; i ++)
         {
             if(minHash[i][file1ID] == minHash[i][file2ID])
             {
@@ -73,12 +81,15 @@ public class MinHash {
             }
         }
         double jac = (double)equalMinCount/noOfPermutations;
-        System.out.println(" the approximate jaccard similarity is " +jac);
-        return 0.0;
+       // System.out.println(" the approximate jaccard similarity is " +jac);
+        return jac;
     }
     int[][] minHashMatrix(){
 
-       // for(int i = 0; i <)
+        InitializePermutationFunction();
+        for(int fileId : fileList.values()) {
+            ProcessMinHashSignature(fileId);
+        }
         return minHash;
     }
     // Returns the number of terms in the document collection.
@@ -104,6 +115,7 @@ public class MinHash {
             }
         }
 
+        fileTermsBinFre = new BigInteger[fileCount];
         currFileID=0;
         minHash = new int[noOfPermutations][fileCount];
 
@@ -126,6 +138,9 @@ public class MinHash {
 
         String fileContent =null;
         fileContent = FilterContent(file);
+
+        fileTermsBinFre[currFileID] = BigInteger.ZERO;
+
         if(fileContent != null)
         {
             terms.add(currFileID,new TreeSet<String>());
@@ -152,6 +167,7 @@ public class MinHash {
                     //terms.get(currFileID).add(str);
                     termIDs.get(currFileID).add(termid);
 
+                    fileTermsBinFre[currFileID] = fileTermsBinFre[currFileID].setBit(termid);
 
                 }
             }
@@ -212,8 +228,8 @@ public class MinHash {
         prime = getNextPrime(termsCollectionCount);
         for(int i=0; i< noOfPermutations; i++)
         {
-            RandAB[i][0] = rand.nextInt(noOfPermutations  );
-            RandAB[i][1] = rand.nextInt(noOfPermutations  );
+            RandAB[i][0] = rand.nextInt(prime  );
+            RandAB[i][1] = rand.nextInt(prime  );
         }
     }
 
