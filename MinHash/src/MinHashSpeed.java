@@ -6,16 +6,23 @@ import java.util.Arrays;
 public class MinHashSpeed {
     public static void main( String [] args){
 
+        MinHashSpeed exp = new MinHashSpeed();
+        exp.experimentSpeed(400);
+        exp.experimentSpeed(600);
+        exp.experimentSpeed(800);
+
+
+    }
+    void experimentSpeed(int numOfPerm){
         MinHash Jac;
         String folder;
-        int numOfPerm =400;
         folder = "D:\\subs\\coms535x\\pa2\\space\\space";
         Jac = new MinHash(folder,numOfPerm);
         //Jac = new MinHash("D:\\subs\\coms535x\\pa2\\space\\space",4);
 
 
         long startTime = System.currentTimeMillis();
-        int fileCount =Jac.fileList.size();
+        int fileCount =Jac.docList.size();
         String [] fileNames = Jac.allDocs();
         for(int i=0; i < fileCount ; i++)
         {
@@ -27,7 +34,7 @@ public class MinHashSpeed {
 
         long endTime = System.currentTimeMillis();
 
-        System.out.println("Total execution time: for exact = " + (endTime - startTime) );
+        long jacExact = endTime - startTime;
 
 
         startTime = System.currentTimeMillis();
@@ -50,6 +57,6 @@ public class MinHashSpeed {
         }
 
         endTime = System.currentTimeMillis();
-        System.out.println("Total execution time: for approximate = " + (endTime - startTime) );
+        System.out.println("Total execution time:perm :"+numOfPerm+" for jac is "+jacExact+" for approximate = " + (endTime - startTime) );
     }
 }
