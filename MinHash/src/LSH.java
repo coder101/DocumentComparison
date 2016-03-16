@@ -1,54 +1,67 @@
+import java.math.BigInteger;
 import java.util.*;
 
 /**
- * Created by pavi on 3/9/2016.
+ * Created by PAvithra Rajarathinam & Anubav on 3/9/2016.
  */
 public class LSH {
 
 
-    List<HashMap<Integer,HashSet<String>> > lsh;
+    List<HashMap<BigInteger,HashSet<String>> > lsh;
+    private static final BigInteger FNV_64_INIT = new BigInteger("01000193",16);
+    private static final BigInteger FNV_64_PRIME = new BigInteger("100000001b3",16);
+
+    private static final BigInteger MOD2POW64   = new BigInteger("2").pow(64);
+
+    public static BigInteger FNV64(final String str) {
+        BigInteger  rv = FNV_64_INIT;
+        final int len = str.length();
+        for(int i = 0; i < len-1; i++) {
+
+            rv = rv.xor(BigInteger.valueOf(str.charAt(i)));
+            rv = rv.multiply(FNV_64_PRIME).mod(MOD2POW64);
+
+        }
+        return rv;
+    }
 
     public LSH(int[][] minHashMatrix, String[] docNames, int bands) {
 
         //build lsh
-        lsh = new ArrayList<HashMap<Integer,HashSet<String>>>(bands) ;
+
+        lsh = new ArrayList<HashMap<BigInteger,HashSet<String>>>(bands) ;
 
         for(int i =0; i < bands; i++){
-            lsh.add(new HashMap<Integer,HashSet<String>>());
+            lsh.add(new HashMap<BigInteger,HashSet<String>>());
         }
 
         int signatureLength = minHashMatrix.length;
-        Random rand = new Random();
-        int prime = getNextPrime(30000);
-        int RandA =rand.nextInt(prime);
-        int RandB =rand.nextInt(prime);
-
 
         int docCount = minHashMatrix[0].length;
         int bandRowLimit = signatureLength/bands;
         for(int i =0; i < docCount ; i++) {
-            int hash = 0;
+
+            String hashStr= new String("");
             int bandIndex=0;
             HashSet<String> dupDocs =  new HashSet<String>();
             for(int j = 0 ; j < signatureLength; j ++){
 
-
-                hash += (minHashMatrix[j][i]*RandA)+RandB;
-                hash = hash %prime;
+                hashStr = hashStr + Integer.toString(minHashMatrix[j][i]);
                 dupDocs.add(docNames[i]);
                 if((j+1)%bandRowLimit ==0){
 
+                    BigInteger hash = FNV64(hashStr);
                     if(!lsh.get(bandIndex).containsKey(hash))
                     {
-                        lsh.get(bandIndex).put(hash,dupDocs);
+                        lsh.get(bandIndex).put(hash,new HashSet<String>(dupDocs));
                     }
                     else
                     {
-                        lsh.get(bandIndex).get(hash).addAll(dupDocs);
+                        lsh.get(bandIndex).get(hash).addAll(new HashSet<String>(dupDocs));
                     }
-                    hash=0;
-                    bandIndex++;
-                    dupDocs =  new HashSet<String>();
+                    hashStr="";
+                     bandIndex++;
+                    dupDocs.clear();
                 }
 
 
@@ -83,7 +96,7 @@ public class LSH {
         for(int i = 0; i < lsh.size();i++)
         {
 
-           for(int j : lsh.get(i).keySet()){
+           for(BigInteger j : lsh.get(i).keySet()){
                if(lsh.get(i).get(j).contains(docName)){
                    nearDuplicateDocs.addAll(lsh.get(i).get(j));
                }

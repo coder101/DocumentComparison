@@ -1,7 +1,7 @@
 import java.util.Arrays;
 
 /**
- * Created by pavi on 3/7/2016.
+ * Created by Pavithra Rajarathinam & Anubav on 3/7/2016.
  */
 public class MinHashSpeed {
     public static void main( String [] args){
@@ -22,19 +22,34 @@ public class MinHashSpeed {
 
 
         long startTime = System.currentTimeMillis();
-        int fileCount =Jac.docList.size();
+        int fileCount =Jac.fileList.size();
         String [] fileNames = Jac.allDocs();
         for(int i=0; i < fileCount ; i++)
         {
             for(int j=i;j<fileCount;j++)
             {
-                double JacExact = Jac.exactJaccard(fileNames[i],fileNames[j]);
+                Jac.exactJaccard(fileNames[i],fileNames[j]);
             }
         }
 
         long endTime = System.currentTimeMillis();
 
         long jacExact = endTime - startTime;
+
+        startTime = System.currentTimeMillis();
+
+
+        for(int i=0; i < fileCount ; i++)
+        {
+            for(int j=i;j<fileCount;j++)
+            {
+                 Jac.exactJaccardBit(fileNames[i],fileNames[j]);
+            }
+        }
+
+        endTime = System.currentTimeMillis();
+
+        long jacExactUsingBitFreq = endTime - startTime;
 
 
         startTime = System.currentTimeMillis();
@@ -57,6 +72,6 @@ public class MinHashSpeed {
         }
 
         endTime = System.currentTimeMillis();
-        System.out.println("Total execution time:perm :"+numOfPerm+" for jac is "+jacExact+" for approximate = " + (endTime - startTime) );
+        System.out.println("Total execution time:perm :"+numOfPerm+" for jac is "+jacExact+" for approximate = " + (endTime - startTime)+ "  exact using bit fre matrix is "+jacExactUsingBitFreq );
     }
 }

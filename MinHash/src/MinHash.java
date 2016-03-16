@@ -5,47 +5,70 @@ import java.math.BigInteger;
 import java.util.*;
 
 /**
- * Created by pavi on 3/1/2016.
+ * Created by PAvithra Rajarathinam & Anubav on 3/1/2016.
+ * Min hash- used to fine jaccard similarity by union and intersection of terms and using minhash
+ * The terms of the entire collection of documents are given unique id. The terms in each document are identified by this
+ * id and later the set of id is used for jaccard and min hash calculation
  */
 public class MinHash {
 
-    BigInteger [] fileTermsBinFre;
-    String[] docListNamesInOrder;
-    Boolean bisMHashFormed= false;
-    public Map<String, Integer> docList;
-    ArrayList<Set<String>> terms;
-    ArrayList<Set<Integer>> termIDs;
-    Map<String,Integer> MasterTermIDTable;
-    int [][] minHash;
+    BigInteger [] fileTermsBinFre;//used for bit level union intersection of term id of each document
+    String[] docListNamesInOrder; // to return doc list ordered according to min hash
+    Boolean bisMHashFormed; // to ensure that minhash is formed only once
+    public Map<String, Integer> fileList; //doc list with the doc id mapped- used to find terms and termids
+    ArrayList<Set<Integer>> termIDs; // id of terms wrt universal id for each document
+    Map<String,Integer> MasterTermIDTable;//collection of terms in the universal collection of document
+    int [][] minHash;//min hash matrix to be used of approximate jaccard calculation
     int fileCount,noOfPermutations,prime,currFileID,termsCollectionCount;
+    // count of no fo files..input permuation count, prime num greater than filecount,
+    // current file id being processed..
+    // total terms in master id table anytume
     DocumentParser parser;
-    int[][] RandAB;
+    Integer[][] RandAB;
     int [] randomNumbers;
+
 
     MinHash(String folder, int numPermutations){
 
         fileCount = 0;
-        docList = new HashMap<String, Integer>();
+        fileList = new HashMap<String, Integer>();
         noOfPermutations = numPermutations;
-        //parse each file - form a set and min signature
-        ProcessFolder(folder);
-         InitializePermutationFunction();
+        //as we get the folder we preprocess all files
+         ProcessFolder(folder);
+        //initialises the permutation constant
+
+        //initialises the minhash matrix as well
+         //minHashMatrix();
     }
+    //sends the list of documents considered for min hash from the input folder
     String[] allDocs(){
+
+        docListNamesInOrder = new String[fileCount];
+        for(String key :fileList.keySet()){
+            docListNamesInOrder[fileList.get(key)]= key;
+        }
 
         return docListNamesInOrder;
     }
     //signature of the file given in argument
     int[] minHashSig(String fileName) {
 
-        return new int[0];
+        int fileID = fileList.get(fileName);
+        int [] sig = new int[noOfPermutations];
+        for(int i =0; i <noOfPermutations ; i++){
+
+            sig[i] = minHash[i][fileID];
+        }
+        return sig ;
     }
 
     //Jaccard Similarity of the files passed as arguments
+    //we take size of union of terms in both files by adding the size in individual documents
+    //and intersection is taken by set function retain all
     double exactJaccard(String file1, String file2){
 
-        int file1ID = docList.get(file1);
-        int file2ID = docList.get(file2);
+        int file1ID = fileList.get(file1);
+        int file2ID = fileList.get(file2);
 
         int unionSize = termIDs.get(file1ID).size()+termIDs.get(file2ID).size();
 
@@ -58,11 +81,12 @@ public class MinHash {
        // System.out.println(" the exact jaccard similarity is "+jac +"  "+jac1);
         return jac;
     }
-    //Jaccard Similarity of the files passed as arguments
+    //Jaccard Similarity of the files passed as arguments using bitwise and and or as arithmetic -
+    // i.e using the bit frequency vector and or function
     double exactJaccardBit(String file1, String file2){
 
-        int file1ID = docList.get(file1);
-        int file2ID = docList.get(file2);
+        int file1ID = fileList.get(file1);
+        int file2ID = fileList.get(file2);
 
         BigInteger intersectionbit = fileTermsBinFre[file1ID];
         intersectionbit = intersectionbit.and(fileTermsBinFre[file2ID]);
@@ -78,16 +102,14 @@ public class MinHash {
     //approxJac of the files passed as args
     double  approximateJaccard(String doc1, String doc2){
 
-        if(!bisMHashFormed){
-            minHashMatrix();
-        }
-        int doc1ID = docList.get(doc1);
-        int doc2ID = docList.get(doc2);
+
+        int doc1ID = fileList.get(doc1);
+        int doc2ID = fileList.get(doc2);
 
         int equalMinCount=0;
         for(int i = 0 ; i < noOfPermutations; i ++)
         {
-            if(minHash[i][doc1ID] == minHash[i][doc2ID])
+            if(minHash[i][doc1ID]== minHash[i][doc2ID])
             {
                 equalMinCount++;
             }
@@ -97,16 +119,17 @@ public class MinHash {
     }
     int[][] minHashMatrix(){
 
-        if(bisMHashFormed)
-            return minHash;
+        InitializePermutationFunction();
+        /*if(bisMHashFormed)
+            return minHash;*/
 
         bisMHashFormed= true;
         docListNamesInOrder = new String[fileCount];
-        for(int docId : docList.values()) {
+        for(int docId : fileList.values()) {
             ProcessMinHashSignature(docId);
         }
-        for(String key :docList.keySet()){
-            docListNamesInOrder[docList.get(key)]= key;
+        for(String key :fileList.keySet()){
+            docListNamesInOrder[fileList.get(key)]= key;
         }
         return minHash;
     }
@@ -137,7 +160,7 @@ public class MinHash {
         currFileID=0;
         minHash = new int[noOfPermutations][fileCount];
 
-        terms = new ArrayList<Set <String>>(fileCount);
+        //terms = new ArrayList<Set <String>>(fileCount);
 
         termIDs = new ArrayList<Set <Integer>>(fileCount);
         MasterTermIDTable = new HashMap<String, Integer>();
@@ -146,7 +169,7 @@ public class MinHash {
         for(File file : files){
             if (file.isFile() && file.getName().contains(".txt")) {
                 ProcessFile(file);
-                docList.put(file.getName(),fileID );
+                fileList.put(file.getName(),fileID );
                 fileID++;
                 currFileID++;
             }
@@ -166,10 +189,7 @@ public class MinHash {
             fileContent.trim();
             for(String str : fileContent.split(" +")) {
                 if(str.length() >2 && (!str.equalsIgnoreCase("the"))) {
-
                     Integer termid = null;
-
-
                     if(!MasterTermIDTable.containsKey(str) )
                     {
                         MasterTermIDTable.put(str,termsCollectionCount);
@@ -248,11 +268,11 @@ public class MinHash {
 
         while(RandABHash.size() != noOfPermutations)
         {
-            int ranint = rand.nextInt(noOfPermutations );
-            RandABHash.put(ranint,rand.nextInt(noOfPermutations  ));
+            int ranint = rand.nextInt(termsCollectionCount );
+            RandABHash.put(ranint,rand.nextInt(termsCollectionCount  ));
         }
 
-        RandAB = new int[noOfPermutations][2];
+        RandAB = new Integer[noOfPermutations][2];
         int j =0;
         for(int i : RandABHash.keySet())
         {
